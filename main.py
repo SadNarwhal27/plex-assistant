@@ -57,9 +57,9 @@ def convert_time_elapsed(elapsed_time, total=False):
     return total_time
     
 
-def main(target_drive):
+def main(target_drive, rss_url):
     load_dotenv()
-    feed = feedparser.parse(os.getenv('RSS_URL'))
+    feed = feedparser.parse(rss_url)
 
     # Creatse the day's unprocessed folder
     today = str(datetime.date.today())
@@ -74,4 +74,4 @@ def main(target_drive):
     print(f"\n{'='*20}\n{elapsed_time}\nTotal Files Downloaded: {total_files} files\n{'=' * 20}")
 
 if __name__ == "__main__":
-    main('P:/Unprocessed Files')
+    main(os.getenv('TARGET_DRIVE'), os.getenv('RSS_URL'))
