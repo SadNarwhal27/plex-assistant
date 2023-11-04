@@ -1,4 +1,4 @@
-import os, time, datetime, os
+import os, time, datetime, os, re
 import feedparser, requests
 
 from alive_progress import alive_bar
@@ -7,6 +7,31 @@ from dotenv import load_dotenv
 def create_folder(folder_path):
     """Creates a folder at a specified location"""
     os.makedirs(folder_path, exist_ok=True)
+
+def organize_folders(folder_path):
+    """Creates folders and organizes files into corresponding directories"""
+
+    # Different regex patterns for detecting type of media
+    movie_pattern = r"^([\w.-]+)\.\d+p"
+    show_pattern = r"^([\w.-]+)\.S\d{2,3}E\d{2,3}"
+    year_pattern = r"\d{4}\b"
+
+    for file in os.listdir(folder_path):
+        print(file)
+        if re.search(show_pattern, file):
+            match = re.search(show_pattern, file).group(1)
+        elif re.search(movie_pattern, file):
+            match = re.search(movie_pattern, file).group(1)
+            if re.search(year_pattern, match):
+                year = re.search(year_pattern, match).group(0)
+                match = match.replace(year, f"({year})")
+        else:
+            continue
+
+        match = match.replace('.', ' ')
+        destination_folder_path = f"{folder_path}/{match}" 
+        create_folder(destination_folder_path)
+        os.rename(f"{folder_path}\{file}", f"{destination_folder_path}\{file}")
 
 def download_file(url, output_path):
     """Takes in a feed url and destination then downloads the content"""
@@ -33,32 +58,23 @@ def output_files(feed, output_directory):
         if os.path.isfile(output_path):
             print(f"{file_name} has already downloaded")
             continue
-
+        
         print(f"=== Downloading: {file_name} ===")
-        tic = time.perf_counter()
-
         file_url = entry.link
         download_file(file_url, output_path)
-
-        toc = time.perf_counter()
-        print(f"Downloaded to: {output_path}\n{convert_time_elapsed(toc-tic)}\n{'='*20}")
         total_files += 1
     return total_files # Returns the total number of files downloaded
 
-def convert_time_elapsed(elapsed_time, total=False):
+def convert_time_elapsed(elapsed_time):
     """Helps make human readable time for print statements"""
     if elapsed_time > 60:
-        total_time = f"Time Elapsed: {round(elapsed_time / 60, 2)} minutes"
+        total_time = f"Total Time Elapsed: {round(elapsed_time / 60, 2)} minutes"
     else:
-        total_time = f"Time Elapsed: {round(elapsed_time, 2)} seconds"
+        total_time = f"Total Time Elapsed: {round(elapsed_time, 2)} seconds"
     
-    if total:
-        total_time = 'Total ' + total_time
     return total_time
-    
 
 def main(target_drive, rss_url):
-    load_dotenv()
     feed = feedparser.parse(rss_url)
 
     # Creatse the day's unprocessed folder
@@ -69,9 +85,13 @@ def main(target_drive, rss_url):
     feed_start = time.perf_counter() # Starts the timer
     total_files = output_files(feed, destination)
     feed_close = time.perf_counter() # Ends the timer
-    elapsed_time = convert_time_elapsed(feed_close - feed_start, True)
+    elapsed_time = convert_time_elapsed(feed_close - feed_start)
 
     print(f"\n{'='*20}\n{elapsed_time}\nTotal Files Downloaded: {total_files} files\n{'=' * 20}")
 
+    organize_folders(destination)
+
 if __name__ == "__main__":
-    main(os.getenv('TARGET_DRIVE'), os.getenv('RSS_URL'))
+    load_dotenv()
+
+    main(os.getenv("TARGET_DRIVE"), os.getenv("RSS_URL"))
