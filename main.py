@@ -1,6 +1,7 @@
-import os, time, datetime, os, re, math
+import os, time, datetime, os, re
 import feedparser, requests
-from name_change import change_file_name
+from mutagen.mp3 import MP3
+# from name_change import change_file_name
 
 from alive_progress import alive_bar
 from dotenv import load_dotenv
@@ -32,6 +33,22 @@ def organize_folders(folder_path):
         destination_folder_path = f"{folder_path}/{match}" 
         create_folder(destination_folder_path)
         os.rename(f"{folder_path}\{file}", f"{destination_folder_path}\{file}")
+
+def organize_albums(folder_path):
+    for file in os.listdir(folder_path):
+        if '.mp3' in file:
+            audio = MP3(f"{folder_path}\{file}")
+            
+            if ',' in str(audio['TPE1']):
+                artist = str(audio['TPE1']).split(',')[0]
+            else:
+                artist = audio['TPE1']
+
+            album = audio['TALB']
+
+            destination_folder_path = f"{folder_path}/{artist}/{album}"
+            create_folder(destination_folder_path)
+            os.rename(f"{folder_path}\{file}", f"{destination_folder_path}\{file}")        
 
 def download_file(url, output_path):
     """Takes in a feed url and destination then downloads the content"""
@@ -77,36 +94,29 @@ def convert_time_elapsed(elapsed_time):
     
     return total_time
 
-def main(target_drive, rss_url, rename=False):
+def main(target_drive, rss_url, audio=False):
 
     # Gets the file path for the day's downloads
     today = str(datetime.date.today())
     destination = f"{target_drive}/{today}"
-    if rename:
-        text_to_add = input('Text to add: ')
-        change_file_name(destination, text_to_add)
+
+    feed = feedparser.parse(rss_url)
+    create_folder(destination)
+
+    feed_start = time.perf_counter() # Starts the timer
+    total_files = output_files(feed, destination)
+    feed_close = time.perf_counter() # Ends the timer
+    elapsed_time = convert_time_elapsed(feed_close - feed_start)
+
+    print(f"\n{'='*20}\n{elapsed_time}\nTotal Files Downloaded: {total_files} files\n{'=' * 20}")
+
+    if audio:
+        organize_albums(destination)
     else:
-        feed = feedparser.parse(rss_url)
-        create_folder(destination)
-
-        feed_start = time.perf_counter() # Starts the timer
-        total_files = output_files(feed, destination)
-        feed_close = time.perf_counter() # Ends the timer
-        elapsed_time = convert_time_elapsed(feed_close - feed_start)
-
-        print(f"\n{'='*20}\n{elapsed_time}\nTotal Files Downloaded: {total_files} files\n{'=' * 20}")
-
         organize_folders(destination)
 
 if __name__ == "__main__":
     load_dotenv()
 
-    # Prompt for renaming files or downloading
-    rename = input(f'Rename files? (T or F): ')
-    if rename.lower() == 't':
-        rename = True
-    else:
-        rename = False
-
-
-    main(os.getenv("TARGET_DRIVE_2"), "https://api.put.io/rss/video/0?oauth_token=YURMJHHZYIDHY4SNEX3R", rename)
+    main(os.getenv("TARGET_DRIVE_2"), "https://api.put.io/rss/video/0?oauth_token=YURMJHHZYIDHY4SNEX3R")
+    main(os.getenv("TARGET_DRIVE_2"), "https://api.put.io/rss/audio/0?oauth_token=YURMJHHZYIDHY4SNEX3R", True)
