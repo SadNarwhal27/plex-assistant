@@ -3,9 +3,6 @@ import feedparser, requests
 from mutagen.mp3 import MP3
 # from name_change import change_file_name
 
-from alive_progress import alive_bar
-from dotenv import load_dotenv
-
 def create_folder(folder_path):
     """Creates a folder at a specified location"""
     os.makedirs(folder_path, exist_ok=True)
@@ -63,10 +60,8 @@ def download_file(url, output_path):
     else:
         # Creates a file at a specific path and a progress bar to track download
         with open(output_path, "wb") as file:
-            with alive_bar(total_kb, unit='kb') as bar:
-                for chunk in response.iter_content(chunk_size=block_size):
-                    file.write(chunk)
-                    bar()
+            for chunk in response.iter_content(chunk_size=block_size):
+                file.write(chunk)
 
 def output_files(feed, output_directory):
     """Goes through the feeds and downloads available files"""
@@ -116,7 +111,6 @@ def main(target_drive, rss_url, audio=False):
         organize_folders(destination)
 
 if __name__ == "__main__":
-    load_dotenv()
 
     main(os.getenv("TARGET_DRIVE_2"), "https://api.put.io/rss/video/0?oauth_token=YURMJHHZYIDHY4SNEX3R")
     main(os.getenv("TARGET_DRIVE_2"), "https://api.put.io/rss/audio/0?oauth_token=YURMJHHZYIDHY4SNEX3R", True)
