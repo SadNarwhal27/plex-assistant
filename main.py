@@ -1,7 +1,11 @@
-import os, time, datetime, os, re
+import os, time, datetime, os, re, sys
 import feedparser, requests
 from mutagen.mp3 import MP3
 # from name_change import change_file_name
+
+def flush():
+    sys.stdout.flush()
+    sys.stderr.flush()
 
 def create_folder(folder_path):
     """Creates a folder at a specified location"""
@@ -50,6 +54,7 @@ def organize_albums(folder_path):
 def download_file(url, output_path):
     """Takes in a feed url and destination then downloads the content"""
     try:
+        flush()
         response = requests.get(url, stream=True)
         block_size = 1024
         # block_size = 8192
@@ -60,8 +65,11 @@ def download_file(url, output_path):
     else:
         # Creates a file at a specific path and a progress bar to track download
         with open(output_path, "wb") as file:
+            chunks_installed = 0
             for chunk in response.iter_content(chunk_size=block_size):
                 file.write(chunk)
+                chunks_installed += 1
+                sys.stderr.write(f'Download Progress: {round((chunks_installed/total_kb) * 100)}%\n')
 
 def output_files(feed, output_directory):
     """Goes through the feeds and downloads available files"""
@@ -71,10 +79,10 @@ def output_files(feed, output_directory):
         output_path = os.path.join(output_directory, file_name)
 
         if os.path.isfile(output_path):
-            print(f"{file_name} has already downloaded")
+            sys.stdout.write(f"{file_name} has already downloaded\n")
             continue
         
-        print(f"=== Downloading: {file_name} ===")
+        sys.stdout.write(f"=== Downloading: {file_name} ===")
         file_url = entry.link
         download_file(file_url, output_path)
         total_files += 1
@@ -89,7 +97,7 @@ def convert_time_elapsed(elapsed_time):
     
     return total_time
 
-def main(target_drive, rss_url, audio=False):
+def main(target_drive, rss_url):
 
     # Gets the file path for the day's downloads
     today = str(datetime.date.today())
@@ -104,13 +112,13 @@ def main(target_drive, rss_url, audio=False):
     elapsed_time = convert_time_elapsed(feed_close - feed_start)
 
     print(f"\n{'='*20}\n{elapsed_time}\nTotal Files Downloaded: {total_files} files\n{'=' * 20}")
+    organize_folders(destination)
 
-    if audio:
-        organize_albums(destination)
-    else:
-        organize_folders(destination)
+    # if audio:
+    #     organize_albums(destination)
+    # else:
+    #     organize_folders(destination)
 
 if __name__ == "__main__":
-
-    main(os.getenv("TARGET_DRIVE_2"), "https://api.put.io/rss/video/0?oauth_token=YURMJHHZYIDHY4SNEX3R")
-    main(os.getenv("TARGET_DRIVE_2"), "https://api.put.io/rss/audio/0?oauth_token=YURMJHHZYIDHY4SNEX3R", True)
+    # print(sys.argv[2], sys.argv[1])
+    main(sys.argv[2], sys.argv[1])
