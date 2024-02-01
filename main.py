@@ -33,12 +33,12 @@ def organize_folders(folder_path):
         match = match.replace('.', ' ')
         destination_folder_path = f"{folder_path}/{match}" 
         create_folder(destination_folder_path)
-        os.rename(f"{folder_path}\{file}", f"{destination_folder_path}\{file}")
+        os.rename(f"{folder_path}/{file}", f"{destination_folder_path}/{file}")
 
 def organize_albums(folder_path):
     for file in os.listdir(folder_path):
         if '.mp3' in file:
-            audio = MP3(f"{folder_path}\{file}")
+            audio = MP3(f"{folder_path}/{file}")
             
             if ',' in str(audio['TPE1']):
                 artist = str(audio['TPE1']).split(',')[0]
@@ -49,7 +49,7 @@ def organize_albums(folder_path):
 
             destination_folder_path = f"{folder_path}/{artist}/{album}"
             create_folder(destination_folder_path)
-            os.rename(f"{folder_path}\{file}", f"{destination_folder_path}\{file}")        
+            os.rename(f"{folder_path}/{file}", f"{destination_folder_path}/{file}")        
 
 def download_file(url, output_path):
     """Takes in a feed url and destination then downloads the content"""
@@ -57,9 +57,9 @@ def download_file(url, output_path):
         flush()
         response = requests.get(url, stream=True)
         block_size = 1024
-        # block_size = 8192
         total_file_size = int(response.headers.get('content-length', 0))
         total_kb = int((total_file_size / block_size))
+        start_time = time.perf_counter()
     except:
         print("Error occured in response creation")
     else:
@@ -70,6 +70,7 @@ def download_file(url, output_path):
                 file.write(chunk)
                 chunks_installed += 1
                 sys.stderr.write(f'Download Progress: {round((chunks_installed/total_kb) * 100)}%\n')
+                sys.stderr.write(f'Download Speed: {round(chunks_installed / (time.perf_counter() - start_time))} kbps\n')
 
 def output_files(feed, output_directory):
     """Goes through the feeds and downloads available files"""
